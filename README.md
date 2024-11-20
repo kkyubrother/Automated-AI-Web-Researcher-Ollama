@@ -71,7 +71,7 @@ FROM your-model-name
 PARAMETER num_ctx 38000
 ```
 
-Replace "your-model-name" with your chosen model (e.g., phi3:3.8b-mini-128k-instruct).
+Replace "your-model-name" with your chosen model (e.g., phi3:medium-128k or phi3:medium).
 
 Then create the model:
 
