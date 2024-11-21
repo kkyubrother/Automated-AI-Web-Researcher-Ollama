@@ -251,7 +251,6 @@ class EnhancedSelfImprovingSearch:
       max_length = 5000
       if len(content) > max_length:
           content = content[:max_length] + "..."
-          
       return content.strip()
 
   def generate_enhanced_summary(self, results: List[SearchResult], query: str) -> str:
