@@ -5,7 +5,6 @@ from colorama import init, Fore, Style
 import logging
 import time
 from io import StringIO
-from Self_Improving_Search import EnhancedSelfImprovingSearch
 from llm_config import get_llm_config
 from llm_response_parser import UltimateLLMResponseParser
 from llm_wrapper import LLMWrapper
