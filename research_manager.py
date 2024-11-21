@@ -860,7 +860,7 @@ Do not provide any additional information or explanation, note that the time ran
                         sys.stdout.write('q')  # Print 'q' to indicate the command
 
                     # Normal character input
-                    elif 32 <= ord(char[0]) <= 126:  # Printable characters
+                    elif 32 <= ord(char) <= 126:  # Printable characters
                         current_line.append(char.decode('utf-8'))
                         sys.stdout.write(char.decode('utf-8'))
 
@@ -992,6 +992,8 @@ Do not provide any additional information or explanation, note that the time ran
         finally:
             self.is_running = False
             logging.debug("Research loop ended.")
+
+
     def start_research(self, topic: str):
         """Start research with new session document"""
         try:
@@ -1451,179 +1453,6 @@ Research Progress:
         finally:
             # Clean up research UI
             self._cleanup_research_ui()
-
-# def show_progress_indicator(self, message="Generating summary, please wait..."):
-#     """Show a rotating progress indicator until the summary is ready."""
-#     symbols = ['|', '/', '-', '\\']
-#     idx = 0
-#     self.summary_ready = False  # Track whether the summary is complete
-
-#     try:
-#         while not self.summary_ready:
-#             sys.stdout.write(f"\r{message} {symbols[idx]}")
-#             sys.stdout.flush()
-#             idx = (idx + 1) % len(symbols)
-#             time.sleep(0.2)  # Adjust the speed of the rotation if needed
-#     except KeyboardInterrupt:
-#         sys.stdout.write("\rOperation interrupted.\n")
-#         self.summary_ready = True
-#     finally:
-#         sys.stdout.write("\r" + " " * (len(message) + 2) + "\r")  # Clear the line when done
-#         sys.stdout.flush()
- # Clear the line when done
-
-    # def _cleanup_research_ui(self):
-    #     """Clean up just the research UI components"""
-    #     if hasattr(self, 'ui') and self.ui:
-    #         self.ui.cleanup()
-
-    # def show_thinking_indicator(self, message: str, stop_flag_name: str):
-    #     """Show a rotating thinking indicator with custom message"""
-    #     symbols = ['|', '/', '-', '\\']
-    #     idx = 0
-    #     while getattr(self, stop_flag_name):  # Use dynamic attribute lookup
-    #         sys.stdout.write(f"\r{message} {symbols[idx]}")
-    #         sys.stdout.flush()
-    #         idx = (idx + 1) % len(symbols)
-    #         time.sleep(0.2)
-    #     sys.stdout.write("\r" + " " * (len(message) + 2) + "\r")  # Clear the line when done
-
-    # def start_conversation_mode(self):
-    #     """Start interactive conversation mode with CTRL+D input handling and thinking indicator"""
-    #     self.conversation_active = True
-    #     self.thinking = False
-
-    #     # Print header with clear instructions
-    #     print("\n" + "="*80)
-    #     print(Fore.CYAN + "Research Conversation Mode" + Style.RESET_ALL)
-    #     print("="*80)
-    #     print(Fore.YELLOW + "\nInstructions:")
-    #     print("- Type your question and press CTRL+D to submit")
-    #     print("- Type 'quit' and press CTRL+D to exit")
-    #     print("- Your messages appear in green")
-    #     print("- AI responses appear in cyan" + Style.RESET_ALL + "\n")
-
-    #     while self.conversation_active:
-    #         try:
-    #             # Show prompt with user input in green
-    #             print(Fore.GREEN + "Your question (Press CTRL+D to submit):" + Style.RESET_ALL)
-    #             user_input = self.get_multiline_conversation_input()
-
-    #             # Handle exit commands
-    #             if not user_input or user_input.lower() in ['quit', 'exit', 'q']:
-    #                 print(Fore.YELLOW + "\nExiting conversation mode..." + Style.RESET_ALL)
-    #                 self.conversation_active = False
-    #                 break
-
-    #             # Skip empty input
-    #             if not user_input.strip():
-    #                 continue
-
-    #             # Echo the submitted question for clarity
-    #             print(Fore.GREEN + "Submitted question:" + Style.RESET_ALL)
-    #             print(Fore.GREEN + user_input + Style.RESET_ALL + "\n")
-
-    #             # Start thinking indicator in a separate thread
-    #             self.thinking = True  # Set flag before starting thread
-    #             thinking_thread = threading.Thread(
-    #                 target=self.show_thinking_indicator,
-    #                 args=("Thinking...", "thinking")
-    #             )
-    #             thinking_thread.daemon = True
-    #             thinking_thread.start()
-
-    #             try:
-    #                 # Generate response
-    #                 response = self._generate_conversation_response(user_input)
-
-    #                 # Stop thinking indicator
-    #                 self.thinking = False
-    #                 thinking_thread.join()
-
-    #                 # Display response in cyan
-    #                 print(Fore.CYAN + "AI Response:" + Style.RESET_ALL)
-    #                 print(f"{Fore.CYAN}{response}{Style.RESET_ALL}\n")
-    #                 print("-" * 80 + "\n")  # Separator between QA pairs
-
-    #             except Exception as e:
-    #                 self.thinking = False  # Ensure thinking indicator stops
-    #                 thinking_thread.join()
-    #                 raise e
-
-    #         except KeyboardInterrupt:
-    #             self.thinking = False  # Ensure thinking indicator stops
-    #             print(Fore.YELLOW + "\nOperation cancelled. Submit 'quit' to exit." + Style.RESET_ALL)
-    #         except Exception as e:
-    #             logger.error(f"Error in conversation mode: {str(e)}")
-    #             print(Fore.RED + f"Error processing question: {str(e)}" + Style.RESET_ALL)
-
-#     def _generate_conversation_response(self, user_query: str) -> str:
-#         """Generate contextual responses with improved context handling"""
-#         try:
-#             # Add debug logging to verify content
-#             logger.info(f"Research summary length: {len(self.research_summary) if self.research_summary else 0}")
-#             logger.info(f"Research content length: {len(self.research_content) if self.research_content else 0}")
-
-#             # First verify we have content
-#             if not self.research_content and not self.research_summary:
-#                 # Try to reload from file if available
-#                 try:
-#                     if os.path.exists(self.document_path):
-#                         with open(self.document_path, 'r', encoding='utf-8') as f:
-#                             self.research_content = f.read().strip()
-#                 except Exception as e:
-#                     logger.error(f"Failed to reload research content: {str(e)}")
-
-#             # Prepare context, ensuring we have content
-#             context = f"""
-# Research Content:
-# {self.research_content}
-
-# Research Summary:
-# {self.research_summary if self.research_summary else 'No summary available'}
-# """
-
-#             prompt = f"""
-# Based on the following research content and summary, please answer this question:
-
-# {context}
-
-# Question: {user_query}
-
-# you have 2 sets of instructions the applied set and the unapplied set, the applied set should be followed if the question is directly relating to the research content whereas anything else other then direct questions about the content of the research will result in you instead following the unapplied ruleset
-
-# Applied:
-
-# Instructions:
-# 1. Answer based ONLY on the research content provided above if asked a question about your research or that content.
-# 2. If the information requested isn't in the research, clearly state that it isn't in the content you gathered.
-# 3. Be direct and specific in your response, DO NOT directly cite research unless specifically asked to, be concise and give direct answers to questions based on the research, unless instructed otherwise.
-
-# Unapplied:
-
-# Instructions:
-
-# 1. Do not make up anything that isn't actually true.
-# 2. Respond directly to the user's question in an honest and thoughtful manner.
-# 3. disregard rules in the applied set for queries not DIRECTLY related to the research, including queries about the research process or what you remember about the research should result in the unapplied ruleset being used.
-
-# Answer:
-# """
-
-#             response = self.llm.generate(
-#                 prompt,
-#                 max_tokens=1000,  # Increased for more detailed responses
-#                 temperature=0.7
-#             )
-
-#             if not response or not response.strip():
-#                 return "I apologize, but I cannot find relevant information in the research content to answer your question."
-
-#             return response.strip()
-
-#         except Exception as e:
-#             logger.error(f"Error generating response: {str(e)}")
-#             return f"I apologize, but I encountered an error processing your question: {str(e)}"
 
   
 if __name__ == "__main__":
