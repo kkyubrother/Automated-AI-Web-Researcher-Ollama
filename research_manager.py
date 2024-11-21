@@ -798,6 +798,49 @@ Do not provide any additional information or explanation, note that the time ran
             logger.error(f"Error adding to document: {str(e)}")
             self.ui.update_output(f"Error saving content: {str(e)}")
 
+    def get_multiline_conversation_input(self) -> str:
+        """Windows-compatible multiline input"""
+        buffer = []
+        current_line = []
+
+        try:
+            while True:
+                if msvcrt.kbhit():
+                    char = msvcrt.getch()
+
+                    # CTRL+D or CTRL+Z detection
+                    if char in [b'\x04', b'\x1a']:
+                        sys.stdout.write('\n')
+                        if current_line:
+                            buffer.append(''.join(current_line))
+                        return ' '.join(buffer).strip()
+
+                    # Handle special characters
+                    elif char == b'\r':  # Enter
+                        sys.stdout.write('\n')
+                        buffer.append(''.join(current_line))
+                        current_line = []
+
+                    elif char == b'\x08':  # Backspace
+                        if current_line:
+                            current_line.pop()
+                            sys.stdout.write('\b \b')
+
+                    elif char == b'\x03':  # CTRL+C
+                        sys.stdout.write('\n')
+                        return 'quit'
+
+                    # Normal character
+                    elif 32 <= ord(char[0]) <= 126:
+                        current_line.append(char.decode('utf-8'))
+                        sys.stdout.write(char.decode('utf-8'))
+
+                    sys.stdout.flush()
+
+        except Exception as e:
+            logger.error(f"Error in multiline input: {str(e)}")
+            return 'quit'
+
     def _process_search_results(self, results: Dict[str, str], focus_area: str):
         """Process and store search results"""
         if not results:
@@ -1352,48 +1395,6 @@ Answer:
             logger.error(f"Error generating response: {str(e)}")
             return f"I apologize, but I encountered an error processing your question: {str(e)}"
 
-def get_multiline_conversation_input(self) -> str:
-  """Windows-compatible multiline input"""
-  buffer = []
-  current_line = []
-
-  try:
-      while True:
-          if msvcrt.kbhit():
-              char = msvcrt.getch()
-
-              # CTRL+D or CTRL+Z detection
-              if char in [b'\x04', b'\x1a']:
-                  sys.stdout.write('\n')
-                  if current_line:
-                      buffer.append(''.join(current_line))
-                  return ' '.join(buffer).strip()
-
-              # Handle special characters
-              elif char == b'\r':  # Enter
-                  sys.stdout.write('\n')
-                  buffer.append(''.join(current_line))
-                  current_line = []
-
-              elif char == b'\x08':  # Backspace
-                  if current_line:
-                      current_line.pop()
-                      sys.stdout.write('\b \b')
-
-              elif char == b'\x03':  # CTRL+C
-                  sys.stdout.write('\n')
-                  return 'quit'
-
-              # Normal character
-              elif 32 <= ord(char[0]) <= 126:
-                  current_line.append(char.decode('utf-8'))
-                  sys.stdout.write(char.decode('utf-8'))
-
-              sys.stdout.flush()
-
-  except Exception as e:
-      logger.error(f"Error in multiline input: {str(e)}")
-      return 'quit'
   
 if __name__ == "__main__":
     from llm_wrapper import LLMWrapper
