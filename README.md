@@ -43,7 +43,7 @@ The key distinction is that this isn't just a chatbot - it's an automated resear
 1. Clone the repository:
 
 ```sh
-git clone https://github.com/TheBlewish/Automated-AI-Web-Researcher-Ollama
+git clone https://github.com/hafeezhmha/Automated-AI-Web-Researcher-Ollama.git
 cd Automated-AI-Web-Researcher-Ollama
 ```
 
