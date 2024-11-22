@@ -40,6 +40,8 @@ The key distinction is that this isn't just a chatbot - it's an automated resear
 
 ## Installation
 
+Python 3.11 with a virtual environment is recommended.
+
 1. Clone the repository:
 
 ```sh
