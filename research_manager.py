@@ -649,6 +649,55 @@ class ResearchManager:
             sys.exit(0)
 
         return " ".join(lines).strip()
+    def get_multiline_input(self) -> str:
+        """Get multiline input with proper command handling"""
+        buffer = []
+        current_line = []
+
+        try:
+            while True:
+                if msvcrt.kbhit():
+                    char = msvcrt.getch()
+
+                    # Handle CTRL+Z detection
+                    if char in [b'\x1a']:  # CTRL+Z (Windows)
+                        sys.stdout.write('\n')
+                        if current_line:
+                            buffer.append(''.join(current_line))
+                        return ' '.join(buffer).strip()
+
+                    # Handle single-character commands immediately
+                    if not buffer and not current_line and char in [b's', b'f', b'p', b'q']:
+                        command = char.decode('utf-8').lower()
+                        sys.stdout.write(command + '\n')
+                        return command
+
+                    # Handle special characters
+                    elif char == b'\r':  # Enter
+                        sys.stdout.write('\n')
+                        if current_line:
+                            buffer.append(''.join(current_line))
+                            current_line = []
+
+                    elif char == b'\x08':  # Backspace
+                        if current_line:
+                            current_line.pop()
+                            sys.stdout.write('\b \b')
+
+                    elif char == b'\x03':  # CTRL+C
+                        sys.stdout.write('\n')
+                        return 'q'
+
+                    # Normal character input
+                    elif 32 <= ord(char) <= 126:  # Printable characters
+                        current_line.append(char.decode('utf-8'))
+                        sys.stdout.write(char.decode('utf-8'))
+
+                    sys.stdout.flush()
+
+        except Exception as e:
+            logger.error(f"Error in multiline input: {str(e)}")
+            return ''
 
     def formulate_search_queries(self, focus_area: ResearchFocus) -> List[str]:
         """Generate search queries for a focus area"""
@@ -993,29 +1042,25 @@ Do not provide any additional information or explanation, note that the time ran
             self.is_running = False
             logging.debug("Research loop ended.")
 
-
     def start_research(self, topic: str):
         """Start research with new session document"""
         try:
+            submit_key = "CTRL+Z" if os.name == 'nt' else "CTRL+D"
+            
             logging.debug("Setting up UI and initializing document.")
             self.ui.setup()
             self.original_query = topic
             self._initialize_document()
 
-            self.ui.update_output(f"Starting research on: {topic}")
+            self.ui.update_output(f"\nStarting research on: {topic}")
             self.ui.update_output(f"Session document: {self.document_path}")
-            self.ui.update_output("\nCommands available during research:")
-            self.ui.update_output("'s' = Show status")
-            self.ui.update_output("'f' = Show current focus")
-            self.ui.update_output("'p' = Pause and assess the research progress")  # New command
-            self.ui.update_output("'q' = Quit research\n")
 
-            # Reset events
-            logging.debug("Resetting events and flags.")
+            # Clear previous state
             self.should_terminate.clear()
             self.research_started.clear()
-            self.research_paused = False  # Ensure research is not paused at the start
+            self.research_paused = False
             self.awaiting_user_decision = False
+            self.is_running = True  # Set running state explicitly
 
             # Start research thread
             logging.debug("Starting research thread.")
@@ -1029,21 +1074,25 @@ Do not provide any additional information or explanation, note that the time ran
                 self.should_terminate.set()
                 return
 
-            logging.debug("Entering command loop.")
-            while not self.should_terminate.is_set():
-                cmd = self.ui.get_input("Enter command: ")
-                if cmd is None or self.shutdown_event.is_set():
-                    if self.should_terminate.is_set() and not self.research_complete:
-                        self.ui.update_output("\nGenerating research summary... please wait...")
-                        summary = self.terminate_research()
-                        self.ui.update_output("\nFinal Research Summary:")
-                        self.ui.update_output(summary)
-                    break
-                if cmd:
-                    self._handle_command(cmd)
+            # Enter command loop
+            while self.is_active():  # Use is_active() instead of should_terminate
+                try:
+                    print(f"\n{Fore.GREEN}Enter command (s/f/p/q) and press {submit_key} to submit:{Style.RESET_ALL}")
+                    command = self.get_multiline_input().strip().lower()  # Use self.get_multiline_input()
+
+                    if command:
+                        self._handle_command(command)
+
+                    if self.should_terminate.is_set():
+                        break
+
+                except KeyboardInterrupt:
+                    self.ui.update_output("\nOperation interrupted. Submit 'q' to quit.")
+                    continue
 
         except Exception as e:
             logging.error(f"Error in research process: {str(e)}")
+            self.ui.update_output(f"Error in research process: {str(e)}")
         finally:
             logging.debug("Cleaning up resources.")
             self._cleanup()
@@ -1068,24 +1117,36 @@ Do not provide any additional information or explanation, note that the time ran
 
     def _handle_command(self, cmd: str):
         """Handle user commands during research"""
-        if cmd.lower() == 's':
-            self.ui.update_output(self.get_progress())
-        elif cmd.lower() == 'f':
-            if self.current_focus:
-                self.ui.update_output("\nCurrent Focus:")
-                self.ui.update_output(f"Area: {self.current_focus.area}")
-                self.ui.update_output(f"Priority: {self.current_focus.priority}")
-            else:
-                self.ui.update_output("\nNo current focus area")
-        elif cmd.lower() == 'p':
-            self.pause_and_assess()
-        elif cmd.lower() == 'q':
-            self.ui.update_output("\nInitiating research termination...")
-            self.should_terminate.set()
-            self.ui.update_output("\nGenerating research summary... please wait...")
-            summary = self.terminate_research()
-            self.ui.update_output("\nFinal Research Summary:")
-            self.ui.update_output(summary)
+        try:
+            if cmd.lower() == 's':
+                progress = self.get_progress()
+                self.ui.update_output("\n" + progress)
+                return  # Don't terminate after showing status
+
+            elif cmd.lower() == 'f':
+                if self.current_focus:
+                    self.ui.update_output("\nCurrent Focus:")
+                    self.ui.update_output(f"Area: {self.current_focus.area}")
+                    self.ui.update_output(f"Priority: {self.current_focus.priority}")
+                else:
+                    self.ui.update_output("\nNo current focus area")
+                return  # Don't terminate after showing focus
+
+            elif cmd.lower() == 'p':
+                self.pause_and_assess()
+                return  # Don't terminate after pausing
+
+            elif cmd.lower() == 'q':
+                self.ui.update_output("\nInitiating research termination...")
+                self.should_terminate.set()
+                self.ui.update_output("\nGenerating research summary... please wait...")
+                summary = self.terminate_research()
+                self.ui.update_output("\nFinal Research Summary:")
+                self.ui.update_output(summary)
+
+        except Exception as e:
+            logger.error(f"Error handling command: {str(e)}")
+            self.ui.update_output(f"Error processing command: {str(e)}")
 
     def show_progress_indicator(self, message="Generating summary, please wait..."):
         """Show a rotating progress indicator until the summary is ready."""
@@ -1349,17 +1410,24 @@ Assessment:
 
     def get_progress(self) -> str:
         """Get current research progress"""
+        status = 'Active' if self.is_active() else 'Stopped'
+        if self.research_paused:
+            status = 'Paused'
+
         return f"""
-Research Progress:
-- Original Query: {self.original_query}
-- Sources analyzed: {len(self.searched_urls)}
-- Status: {'Active' if self.is_running else 'Stopped'}
-- Current focus: {self.current_focus.area if self.current_focus else 'Initializing'}
-"""
+        Research Progress:
+        - Original Query: {self.original_query}
+        - Sources analyzed: {len(self.searched_urls)}
+        - Status: {status}
+        - Current focus: {self.current_focus.area if self.current_focus else 'Initializing'}
+        """
 
     def is_active(self) -> bool:
         """Check if research is currently active"""
-        return self.is_running and self.research_thread and self.research_thread.is_alive()
+        return (self.is_running and 
+                self.research_thread and 
+                self.research_thread.is_alive() and 
+                not self.should_terminate.is_set())
 
     def terminate_research(self) -> str:
         """Terminate research and return to main terminal"""
