@@ -86,13 +86,15 @@ def get_multiline_input() -> str:
                   sys.stdout.write('\n')  # New line for clean display
                   if current_line:
                       lines.append(''.join(current_line))
-                  return ' '.join(lines).strip()
+                  result = ''.join(lines).strip() if lines else ''.join(current_line).strip()
+                  return result if result else ''  # Return empty string instead of None
 
               # Handle special characters
               elif char in [b'\r', b'\n']:  # Enter
                   sys.stdout.write('\n')
-                  lines.append(''.join(current_line))
-                  current_line = []
+                  if current_line:  # Only append if there's content
+                      lines.append(''.join(current_line))
+                      current_line = []
 
               elif char == b'\x08':  # Backspace
                   if current_line:
@@ -180,6 +182,7 @@ def handle_research_mode(research_manager, query):
   try:
       # Start the research
       research_manager.start_research(query)
+      research_active = True  # Flag to track research state
 
       submit_key = "CTRL+Z" if os.name == 'nt' else "CTRL+D"
       print(f"\n{Fore.YELLOW}Research Running. Available Commands:{Style.RESET_ALL}")
@@ -190,12 +193,20 @@ def handle_research_mode(research_manager, query):
       print("'q' = Quit research")
 
       # While the research is active, keep checking for commands
-      while research_manager.is_active():
+      while research_active and research_manager.is_active():
           try:
-              command = get_multiline_input().strip().lower()  # Ensure input is captured
+              print(f"\n{Fore.GREEN}Enter command (s/f/p/q) and press {submit_key} to submit:{Style.RESET_ALL}")
+              command = get_multiline_input().strip().lower()
+
+              # Handle empty input
+              if not command:
+                  continue
 
               if command == 's':  # Show status command
-                  print("\n" + research_manager.get_progress())
+                  status = research_manager.get_progress()
+                  print("\n" + status)
+                  # Don't break or stop research after showing status
+                  continue
 
               elif command == 'f':  # Show current focus command
                   if research_manager.current_focus:
@@ -205,42 +216,53 @@ def handle_research_mode(research_manager, query):
                       print(f"Reasoning: {research_manager.current_focus.reasoning}")
                   else:
                       print(f"\n{Fore.YELLOW}No current focus area{Style.RESET_ALL}")
+                  continue
 
               elif command == 'p':  # Pause research progress command
                   research_manager.pause_and_assess()
+                  continue
 
               elif command == 'q':  # Quit research
                   print(f"\n{Fore.YELLOW}Research terminated by user.{Style.RESET_ALL}")
-                  break  # Exit the loop and end the research session
+                  research_active = False
+                  break
 
               else:
-                  print(f"{Fore.RED}Unknown command. Please enter a valid command.{Style.RESET_ALL}")
+                  print(f"{Fore.RED}Unknown command. Please enter a valid command (s/f/p/q).{Style.RESET_ALL}")
+                  continue
 
           except KeyboardInterrupt:
               print(f"\n{Fore.YELLOW}Research interrupted by user.{Style.RESET_ALL}")
-              break  # Handle interrupt gracefully
+              research_active = False
+              break
 
           except Exception as e:
               logger.error(f"Error processing command: {str(e)}")
               print(f"{Fore.RED}An error occurred: {str(e)}{Style.RESET_ALL}")
+              continue
 
-      # After finishing or quitting research, show the summary
-      summary = research_manager.terminate_research()
-      research_manager._cleanup_research_ui()  # Now this should work without errors
+      # Only terminate if research is no longer active
+      if not research_active:
+          print("\nInitiating research termination...")
+          summary = research_manager.terminate_research()
 
-      # Show research summary
-      print(f"\n{Fore.GREEN}Research Summary:{Style.RESET_ALL}")
-      print(summary)
+          try:
+              research_manager._cleanup_research_ui()
+          except Exception as e:
+              logger.error(f"Error during UI cleanup: {str(e)}")
 
-      # Only proceed to conversation mode if research is complete
-      if research_manager.research_complete and research_manager.research_summary:
-          time.sleep(0.5)  # Small delay to ensure clean transition
-          research_manager.start_conversation_mode()
+          print(f"\n{Fore.GREEN}Research Summary:{Style.RESET_ALL}")
+          print(summary)
+
+          if research_manager.research_complete and research_manager.research_summary:
+              time.sleep(0.5)
+              research_manager.start_conversation_mode()
 
   except KeyboardInterrupt:
       print(f"\n{Fore.YELLOW}Research interrupted.{Style.RESET_ALL}")
       research_manager.terminate_research()
   except Exception as e:
+      logger.error(f"Research error: {str(e)}")
       print(f"\n{Fore.RED}Research error: {str(e)}{Style.RESET_ALL}")
       research_manager.terminate_research()
 def main():
