@@ -38,7 +38,7 @@ The key distinction is that this isn't just a chatbot - it's an automated resear
 - Comprehensive answer synthesis using web-sourced information
 - Research conversation mode for exploring findings
 
-## Installation
+## Installation on Windows
 
 Python 3.11 with a virtual environment is recommended.
 
