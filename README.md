@@ -62,7 +62,7 @@ Click the image above to watch the demonstration of my project.
 
 4. **올라마 설치 및 구성하기:**
 
-    https://ollama.ai](https://ollama.ai)의 지침에 따라 Ollama를 설치합니다.
+    [https://ollama.ai](https://ollama.ai)의 지침에 따라 Ollama를 설치합니다.
 
     선택한 모델 파일을 사용하여 필요한 컨텍스트 길이를 가진 사용자 정의 모델 변형을 생성합니다(`phi3:3.8b-mini-128k-instruct` 또는 `phi3:14b-medium-128k-instruct` 권장).
 
